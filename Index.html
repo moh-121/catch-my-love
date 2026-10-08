@@ -1,0 +1,342 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#170d2b">
+<title>Catch My Heart 💗</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;background:#170d2b;color:#fff0f7;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  text-align:center;overflow:hidden;touch-action:manipulation
+}
+header{padding:16px 12px 8px}
+h1{font-size:26px;margin:5px;color:#ff9acb}
+.sub{font-size:14px;color:#d9c3ff}
+.stats{display:flex;justify-content:space-around;align-items:center;
+  padding:12px;font-weight:700}
+#lives{font-size:22px;letter-spacing:3px;color:#ff8fbc}
+#score{color:#ffe0f0}
+#arena{
+  position:relative;height:53vh;min-height:300px;max-height:520px;
+  margin:0 12px;overflow:hidden;border:1px solid #68417f;
+  border-radius:22px;
+  background:radial-gradient(ellipse at 50% 40%,#3b1c58,#211033 70%);
+  box-shadow:0 0 30px #a855f722;touch-action:manipulation
+}
+#gameCanvas{width:100%;height:100%;display:block;touch-action:manipulation}
+#message{height:30px;padding-top:10px;font-size:14px;color:#ffc7e3}
+button{
+  border:0;border-radius:30px;padding:14px 24px;
+  font-size:16px;font-weight:700;cursor:pointer;
+  background:linear-gradient(135deg,#ff91c8,#ffcae2);
+  color:#4a1636;box-shadow:0 5px 18px #ff8fbc33;
+  -webkit-tap-highlight-color:transparent
+}
+button:active{transform:scale(.96)}
+#sound{padding:10px 15px;background:#38234d;color:#ffe5f2;
+  box-shadow:none;font-size:14px}
+.controls{display:flex;justify-content:center;gap:10px;margin:12px}
+.note{font-size:12px;color:#bda6d3;padding:0 16px}
+.overlay{
+  position:fixed;inset:0;background:#12091cee;z-index:5;
+  display:flex;align-items:center;justify-content:center;padding:22px;
+  overflow:auto
+}
+.panel{
+  width:100%;max-width:390px;max-height:90vh;overflow:auto;
+  padding:28px 22px;border:1px solid #925c91;border-radius:26px;
+  background:linear-gradient(160deg,#382047,#1e102d);
+  box-shadow:0 0 50px #ff85c522
+}
+.panel h2{color:#ff9acb;font-size:27px}
+.panel p{line-height:1.7;color:#f8dced}
+.hidden{display:none!important}
+.envelope{font-size:60px;animation:bob 1.5s infinite ease-in-out}
+@keyframes bob{50%{transform:translateY(-9px) rotate(3deg)}}
+.letter{white-space:pre-wrap;text-align:left;background:#fff0f6;
+  color:#652748;border-radius:18px;padding:20px;line-height:1.8;
+  font-size:16px;margin:18px 0}
+.letter h3{text-align:center;color:#bc397b}
+</style>
+</head>
+<body>
+<header>
+  <h1>♡ Catch My Heart ♡</h1>
+  <div class="sub">A tiny game made just for you 💗</div>
+</header>
+
+<div class="stats">
+  <div>SCORE <span id="score">0</span> / 20</div>
+  <div id="lives" aria-label="3 lives">❤️ ❤️ ❤️</div>
+</div>
+
+<div id="arena">
+  <canvas id="gameCanvas"></canvas>
+</div>
+<div id="message">Every heart you catch is a little piece of my love ✨</div>
+<div class="controls">
+  <button id="start">Start playing 💕</button>
+  <button id="sound">🔊 Sound ON</button>
+</div>
+<div class="note">Tap the falling hearts before they reach the bottom!</div>
+
+<div id="intro" class="overlay">
+  <div class="panel">
+    <div style="font-size:54px">💌</div>
+    <h2>Hey, my love...</h2>
+    <p>I made a little game just for you.<br>
+    Catch 20 hearts to unlock a special message from me. 💗</p>
+    <p style="font-size:14px">You have 3 lives. Be quick, sweetheart! ♡</p>
+    <button id="begin">Let's play! 💖</button>
+  </div>
+</div>
+
+<div id="result" class="overlay hidden">
+  <div class="panel">
+    <div class="envelope" id="resultEmoji">💔</div>
+    <h2 id="resultTitle">Almost, my love!</h2>
+    <p id="resultText">Let's try again.</p>
+    <button id="retry">Try again 💗</button>
+  </div>
+</div>
+
+<div id="letterScreen" class="overlay hidden">
+  <div class="panel">
+    <div class="envelope">💌</div>
+    <h2>You caught my heart!</h2>
+    <p>You did it, sweetheart. Here's what's been on my heart...</p>
+    <div class="letter">
+      <h3>To my favorite person ❤️</h3>
+      <div id="letterText">My love,
+
+I'm sorry for hurting you. You mean so much to me, and I want to make things right.
+
+You deserve to feel loved, respected, and appreciated. I know a game cannot undo what happened, but I hope it can be a small reminder that you matter so much to me.
+
+I'm ready to listen, understand how you feel, and do my best to make things right. You don't have to forgive me before you're ready.
+
+Whenever you're ready, I'd love to talk.
+
+With all my love,
+Your person ❤️</div>
+    </div>
+    <p style="font-size:14px">No pressure, just love. ❤️</p>
+    <button id="closeLetter">Sending you a hug 🫂</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const arena = document.getElementById('arena');
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const messageEl = document.getElementById('message');
+const startBtn = document.getElementById('start');
+const soundBtn = document.getElementById('sound');
+
+let W=300,H=400,dpr=1;
+let hearts=[],particles=[],decor=[];
+let score=0,lives=3,playing=false,last=0,spawnClock=0;
+let soundOn=true,audio=null,musicTimer=null,musicStep=0;
+const target=20;
+const colors=['#ff76b7','#ffb0d5','#ff8b9d','#e7b5ff','#fff0f7'];
+const rand=(a,b)=>Math.random()*(b-a)+a;
+
+function resize(){
+  const r=arena.getBoundingClientRect();
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  W=r.width;H=r.height;
+  canvas.width=Math.round(W*dpr);
+  canvas.height=Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  decor=Array.from({length:30},()=>({
+    x:rand(0,W),y:rand(0,H),r:rand(1,2.5),
+    phase:rand(0,6.28),speed:rand(.3,1)
+  }));
+}
+window.addEventListener('resize',resize);
+resize();
+
+function tone(freq,duration,type='sine',volume=.07){
+  if(!soundOn)return;
+  try{
+    if(!audio)audio=new(window.AudioContext||window.webkitAudioContext)();
+    if(audio.state==='suspended')audio.resume();
+    const o=audio.createOscillator(),g=audio.createGain();
+    o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);
+    g.gain.setValueAtTime(volume,audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);
+    o.connect(g);g.connect(audio.destination);
+    o.start();o.stop(audio.currentTime+duration);
+  }catch(e){}
+}
+function catchSound(){
+  tone(660,.12);setTimeout(()=>tone(880,.16),65);
+}
+function missSound(){tone(180,.22,'triangle',.045)}
+function startMusic(){
+  stopMusic();
+  if(!soundOn)return;
+  const notes=[523,659,784,659,587,698,880,698];
+  musicStep=0;
+  musicTimer=setInterval(()=>{
+    if(playing&&soundOn){
+      tone(notes[musicStep%notes.length],.24,'sine',.018);
+      musicStep++;
+    }
+  },360);
+}
+function stopMusic(){
+  if(musicTimer){clearInterval(musicTimer);musicTimer=null}
+}
+soundBtn.addEventListener('click',()=>{
+  soundOn=!soundOn;
+  soundBtn.textContent=soundOn?'🔊 Sound ON':'🔇 Sound OFF';
+  if(soundOn&&playing)startMusic();else stopMusic();
+  if(soundOn)tone(600,.1);
+});
+
+function heartPath(x,y,size){
+  ctx.beginPath();
+  ctx.moveTo(x,y+size*.35);
+  ctx.bezierCurveTo(x-size*1.1,y-size*.35,x-size*.65,y-size*.95,x,y-size*.45);
+  ctx.bezierCurveTo(x+size*.65,y-size*.95,x+size*1.1,y-size*.35,x,y+size*.35);
+  ctx.closePath();
+}
+function spawn(){
+  const s=rand(13,21);
+  hearts.push({
+    x:rand(s+5,W-s-5),y:-s*2,size:s,
+    speed:rand(85,145)+score*1.8,
+    drift:rand(-22,22),phase:rand(0,6.28),
+    color:colors[Math.floor(Math.random()*colors.length)],
+    rotation:rand(-.2,.2)
+  });
+}
+function burst(x,y,color){
+  for(let i=0;i<12;i++){
+    particles.push({x,y,vx:rand(-100,100),vy:rand(-140,45),
+      life:rand(.35,.7),max:.7,r:rand(2,5),color});
+  }
+}
+function update(dt){
+  if(!playing)return;
+  spawnClock+=dt;
+  const interval=Math.max(.38,.85-score*.018);
+  if(spawnClock>=interval){spawnClock=0;spawn()}
+  for(let i=hearts.length-1;i>=0;i--){
+    const h=hearts[i];
+    h.y+=h.speed*dt;
+    h.x+=Math.sin(performance.now()/450+h.phase)*h.drift*dt;
+    h.rotation+=dt*.45;
+    if(h.y-h.size>H){
+      hearts.splice(i,1);lives--;
+      updateStats();missSound();
+      messageEl.textContent=['Stay focused, sweetheart 💗','You can do it! ✨','One more chance, my love!'][3-lives]||'Keep going! 💕';
+      if(lives<=0){endGame(false);return}
+    }
+  }
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx*dt;p.y+=p.vy*dt;
+    p.vy+=180*dt;p.life-=dt;
+    if(p.life<=0)particles.splice(i,1);
+  }
+}
+function draw(t){
+  ctx.clearRect(0,0,W,H);
+  for(const d of decor){
+    const a=.18+.35*(.5+.5*Math.sin(t*.001*d.speed+d.phase));
+    ctx.globalAlpha=a;ctx.fillStyle='#ffe3f5';
+    ctx.beginPath();ctx.arc(d.x,d.y,d.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  for(const h of hearts){
+    ctx.save();ctx.translate(h.x,h.y);ctx.rotate(h.rotation);
+    ctx.shadowColor=h.color;ctx.shadowBlur=16;
+    ctx.fillStyle=h.color;heartPath(0,0,h.size);ctx.fill();
+    ctx.restore();
+  }
+  for(const p of particles){
+    ctx.globalAlpha=Math.max(0,p.life/p.max);
+    ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.r,p.r);
+  }
+  ctx.globalAlpha=1;
+}
+function loop(t){
+  const dt=Math.min((t-last)/1000||0,.04);last=t;
+  update(dt);draw(t);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+function updateStats(){
+  scoreEl.textContent=score;
+  livesEl.textContent='❤️ '.repeat(lives)+'🖤 '.repeat(3-lives);
+  livesEl.setAttribute('aria-label',lives+' lives remaining');
+}
+function pointer(e){
+  if(!playing)return;
+  const r=canvas.getBoundingClientRect();
+  const x=e.clientX-r.left,y=e.clientY-r.top;
+  for(let i=hearts.length-1;i>=0;i--){
+    const h=hearts[i];
+    if(Math.hypot(x-h.x,y-h.y)<h.size*1.8){
+      hearts.splice(i,1);
+      score++;updateStats();burst(h.x,h.y,h.color);catchSound();
+      messageEl.textContent=['So many hearts for you 💗','You make my heart sparkle ✨','Every heart is yours 💕'][score%3];
+      if(score>=target){endGame(true)}
+      return;
+    }
+  }
+}
+canvas.addEventListener('pointerdown',pointer);
+
+function hide(id){document.getElementById(id).classList.add('hidden')}
+function show(id){document.getElementById(id).classList.remove('hidden')}
+function reset(){
+  score=0;lives=3;hearts=[];particles=[];
+  spawnClock=0;playing=true;last=performance.now();
+  updateStats();hide('intro');hide('result');hide('letterScreen');
+  startBtn.textContent='Playing…';
+  startBtn.disabled=true;
+  messageEl.textContent='Catch those hearts, sweetheart! 💖';
+  startMusic();
+}
+function endGame(won){
+  playing=false;stopMusic();startBtn.disabled=false;
+  startBtn.textContent='Play again 💕';
+  if(won){
+    tone(660,.2);setTimeout(()=>tone(784,.2),130);
+    setTimeout(()=>tone(1046,.35),260);
+    document.getElementById('letterScreen').classList.remove('hidden');
+  }else{
+    document.getElementById('resultEmoji').textContent='💔';
+    document.getElementById('resultTitle').textContent='Almost, my love!';
+    document.getElementById('resultText').textContent=
+      'You caught '+score+' hearts. Every try is worth it. Take a breath and try again when you are ready. ❤️';
+    show('result');
+  }
+}
+document.getElementById('begin').addEventListener('click',()=>{
+  reset();tone(660,.12);
+});
+startBtn.addEventListener('click',()=>{
+  if(!playing){reset();tone(660,.12)}
+});
+document.getElementById('retry').addEventListener('click',()=>{
+  hide('result');reset();tone(660,.12);
+});
+document.getElementById('closeLetter').addEventListener('click',()=>{
+  hide('letterScreen');
+  messageEl.textContent='Thank you for playing, my love ❤️';
+});
+})();
+</script>
+</body>
+</html>
